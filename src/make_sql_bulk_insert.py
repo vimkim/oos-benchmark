@@ -29,16 +29,16 @@ def main():
         help="Number of rows to insert"
     )
     parser.add_argument(
+        "--char-len",
+        type=int,
+        required=True,
+        help="Length of each CHAR(n) column"
+    )
+    parser.add_argument(
         "--num-char",
         type=int,
         required=False,
         help="Number of 2k byte CHAR columns (c1..cN) to insert"
-    )
-    parser.add_argument(
-        "--char-len"
-        type=int,
-        required=True,
-        help="Length of each CHAR(n) column"
     )
     args = parser.parse_args()
 
@@ -47,7 +47,7 @@ def main():
     NUM_CHAR = args.num_char if args.num_char else 0
     CHAR_LENGTH = args.char_len
     CUBRID_CHAR_SIZE = 4
-    A_LEN = args.length - (CHAR_LENGTH * NUM_CHAR * CUBRID_CHAR_SIZE)
+    A_LEN = args.length
 
     TOTAL_ROWS = args.nums
     ROWS_PER_INSERT = 100
