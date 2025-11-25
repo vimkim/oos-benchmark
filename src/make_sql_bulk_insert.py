@@ -29,10 +29,10 @@ def main():
         help="Number of rows to insert"
     )
     parser.add_argument(
-        "--num-char"
+        "--num-char",
         type=int,
         required=False,
-        help="Number of 2k byte char columns to insert"
+        help="Number of 2k byte CHAR columns (c1..cN) to insert"
     )
     args = parser.parse_args()
 
@@ -45,20 +45,49 @@ def main():
     ROWS_PER_INSERT = 100
     INSERTS_PER_COMMIT = 100   # 100 inserts * 100 rows = 10,000 rows per COMMIT
 
+    # Precompute column definitions and lists
+    base_columns = ["id", "txt"]
+    char_columns = [f"c{i + 1}" for i in range(NUM_CHAR)]
+    all_columns = base_columns + char_columns
+    column_list_sql = ", ".join(all_columns)
+
+    # For CREATE TABLE
+    if NUM_CHAR > 0:
+        char_defs = ", ".join(f"{col} CHAR(2000)" for col in char_columns)
+        table_def = f"(id INT, txt VARCHAR, {char_defs})"
+    else:
+        table_def = "(id INT, txt VARCHAR)"
+
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        # Table creation (adjust as needed)
-        f.write(f"CREATE TABLE {TABLE_NAME} (id INT, txt VARCHAR);\n")
+        # Table creation
+        f.write(f"CREATE TABLE {TABLE_NAME} {table_def};\n")
         f.write("COMMIT;\n\n")
 
         current_rows = []
         insert_count = 0
 
         for i in range(1, TOTAL_ROWS + 1):
-            # Use RPAD to generate string of length A_LEN
-            current_rows.append(f"({i}, RPAD('A', {A_LEN}, 'A'))")
+            # id and txt
+            values = [
+                str(i),
+                f"RPAD('A', {A_LEN}, 'A')",
+            ]
+
+            # c1..cN as CHAR(2000) filled with 'B', 'C', 'D', ...
+            for j in range(NUM_CHAR):
+                letter_ord = ord('B') + j
+                if letter_ord > ord('Z'):
+                    letter = 'Z'
+                else:
+                    letter = chr(letter_ord)
+                values.append(f"RPAD('{letter}', 2000, '{letter}')")
+
+            row_sql = "(" + ", ".join(values) + ")"
+            current_rows.append(row_sql)
 
             if len(current_rows) == ROWS_PER_INSERT:
-                f.write(f"INSERT INTO {TABLE_NAME} (id, txt) VALUES\n")
+                f.write(
+                    f"INSERT INTO {TABLE_NAME} ({column_list_sql}) VALUES\n")
                 f.write(",\n".join(current_rows))
                 f.write(";\n\n")
 
@@ -68,9 +97,9 @@ def main():
                 if insert_count % INSERTS_PER_COMMIT == 0:
                     f.write("COMMIT;\n\n")
 
-        # Safety: handle remainder if TOTAL_ROWS is not multiple of ROWS_PER_INSERT
+        # Handle remainder if TOTAL_ROWS is not a multiple of ROWS_PER_INSERT
         if current_rows:
-            f.write(f"INSERT INTO {TABLE_NAME} (id, txt) VALUES\n")
+            f.write(f"INSERT INTO {TABLE_NAME} ({column_list_sql}) VALUES\n")
             f.write(",\n".join(current_rows))
             f.write(";\n\n")
             f.write("COMMIT;\n\n")
