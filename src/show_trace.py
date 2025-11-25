@@ -26,7 +26,7 @@ def run_query(sql: str):
         # Optionally fetch and print result rows
         rows = cur.fetchall()
         for row in rows:
-            print(row)
+            sys.stderr.write(str(row))
 
         # Show trace
         cur.execute("show trace")
