@@ -1,5 +1,11 @@
 set shell := ["nu", "-c"]
 
+cubrid-server-refresh:
+    cubrid service stop
+    cubrid server stop testdb
+    cubrid server start testdb
+    cubrid broker start
+
 show-trace:
     uv run show_trace.py -c 'select crount(*) from t_oos_ovf'
 
@@ -44,3 +50,15 @@ run-benchmarks:
     just run-benchmark-2500-all
     just run-benchmark-15500-id
     just run-benchmark-15500-all
+
+report-develop-512:
+    open ./report-sqlite.sql | sqlite3 out/develop-512/benchmarks.sqlite -box
+
+report-develop-20000:
+    open ./report-sqlite.sql | sqlite3 out/develop-20000/benchmarks.sqlite -box
+
+report-oos-512:
+    open ./report-sqlite.sql | sqlite3 out/oos-512/benchmarks.sqlite -box
+
+report-oos-20000:
+    open ./report-sqlite.sql | sqlite3 out/oos-20000/benchmarks.sqlite -box
