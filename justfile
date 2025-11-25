@@ -1,3 +1,5 @@
+set shell := ["nu", "-c"]
+
 show-trace:
     uv run show_trace.py -c 'select crount(*) from t_oos_ovf'
 
@@ -24,3 +26,21 @@ load-t_oos_12000_char_0:
 
 load-t_oos_12000_char_2:
     cs -i t_oos_12000_char_2.sql --no-auto-commit
+
+run-benchmark-2500-id:
+    ^uv run src/run_benchmark.py --col-names "id" --table-name "t_2500" --num-rows 300000 --times 3
+
+run-benchmark-2500-all:
+    ^uv run src/run_benchmark.py --col-names "*" --table-name "t_2500" --num-rows 300000 --times 3
+
+run-benchmark-15500-id:
+    ^uv run src/run_benchmark.py --col-names "id" --table-name "t_15500" --num-rows 300000 --times 3
+
+run-benchmark-15500-all:
+    ^uv run src/run_benchmark.py --col-names "*" --table-name "t_15500" --num-rows 300000 --times 3
+
+run-benchmarks:
+    just run-benchmark-2500-id
+    just run-benchmark-2500-all
+    just run-benchmark-15500-id
+    just run-benchmark-15500-all
