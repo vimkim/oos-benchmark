@@ -34,12 +34,20 @@ def main():
         required=False,
         help="Number of 2k byte CHAR columns (c1..cN) to insert"
     )
+    parser.add_argument(
+        "--char-len"
+        type=int,
+        required=True,
+        help="Length of each CHAR(n) column"
+    )
     args = parser.parse_args()
 
     TABLE_NAME = args.table_name
     OUTPUT_FILE = args.output
-    A_LEN = args.length
     NUM_CHAR = args.num_char if args.num_char else 0
+    CHAR_LENGTH = args.char_len
+    CUBRID_CHAR_SIZE = 4
+    A_LEN = args.length - (CHAR_LENGTH * NUM_CHAR * CUBRID_CHAR_SIZE)
 
     TOTAL_ROWS = args.nums
     ROWS_PER_INSERT = 100
@@ -53,7 +61,8 @@ def main():
 
     # For CREATE TABLE
     if NUM_CHAR > 0:
-        char_defs = ", ".join(f"{col} CHAR(2000)" for col in char_columns)
+        char_defs = ", ".join(
+            f"{col} CHAR({CHAR_LENGTH})" for col in char_columns)
         table_def = f"(id INT, txt VARCHAR, {char_defs})"
     else:
         table_def = "(id INT, txt VARCHAR)"
@@ -73,14 +82,14 @@ def main():
                 f"RPAD('A', {A_LEN}, 'A')",
             ]
 
-            # c1..cN as CHAR(2000) filled with 'B', 'C', 'D', ...
+            # c1..cN as CHAR({CHAR_LENGTH}) filled with 'B', 'C', 'D', ...
             for j in range(NUM_CHAR):
                 letter_ord = ord('B') + j
                 if letter_ord > ord('Z'):
                     letter = 'Z'
                 else:
                     letter = chr(letter_ord)
-                values.append(f"RPAD('{letter}', 2000, '{letter}')")
+                values.append(f"RPAD('{letter}', {CHAR_LENGTH}, '{letter}')")
 
             row_sql = "(" + ", ".join(values) + ")"
             current_rows.append(row_sql)
