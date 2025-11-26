@@ -1,10 +1,12 @@
 set shell := ["nu", "-c"]
 
+mod cub '~/my-cubrid/stow/cubrid/justfile'
+
 cubrid-server-refresh:
-    cubrid service stop
-    cubrid server stop testdb
-    cubrid server start testdb
-    cubrid broker start
+    do -i { cubrid service stop }
+    do -i { cubrid server stop testdb }
+    do -i { cubrid server start testdb }
+    do -i { cubrid broker start }
 
 show-trace:
     uv run show_trace.py -c 'select crount(*) from t_oos_ovf'
@@ -99,7 +101,7 @@ run-benchmark-16500-id-oos-perf-20G:
 run-benchmark-16500-all-oos-perf-20G:
     ^uv run src/run_benchmark.py --col-names "*" --table-name "t_16500" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '20.0G'
 
-run-benchmarks-develop-512M:
+run-benchmarks-develop-512M: cubrid-set-data-buffer-512M
     just run-benchmark-2500-id-develop-512M
     just run-benchmark-2500-all-develop-512M
     just run-benchmark-15500-id-develop-512M
@@ -107,7 +109,7 @@ run-benchmarks-develop-512M:
     just run-benchmark-16500-id-develop-512M
     just run-benchmark-16500-all-develop-512M
 
-run-benchmarks-develop-20G:
+run-benchmarks-develop-20G: cubrid-set-data-buffer-20G
     just run-benchmark-2500-id-develop-20G
     just run-benchmark-2500-all-develop-20G
     just run-benchmark-15500-id-develop-20G
@@ -115,7 +117,7 @@ run-benchmarks-develop-20G:
     just run-benchmark-16500-id-develop-20G
     just run-benchmark-16500-all-develop-20G
 
-run-benchmarks-oos-perf-512M:
+run-benchmarks-oos-perf-512M: cubrid-set-data-buffer-512M
     just run-benchmark-2500-id-oos-perf-512M
     just run-benchmark-2500-all-oos-perf-512M
     just run-benchmark-15500-id-oos-perf-512M
@@ -123,7 +125,7 @@ run-benchmarks-oos-perf-512M:
     just run-benchmark-16500-id-oos-perf-512M
     just run-benchmark-16500-all-oos-perf-512M
 
-run-benchmarks-oos-perf-20G:
+run-benchmarks-oos-perf-20G: cubrid-set-data-buffer-20G
     just run-benchmark-2500-id-oos-perf-20G
     just run-benchmark-2500-all-oos-perf-20G
     just run-benchmark-15500-id-oos-perf-20G
@@ -131,14 +133,26 @@ run-benchmarks-oos-perf-20G:
     just run-benchmark-16500-id-oos-perf-20G
     just run-benchmark-16500-all-oos-perf-20G
 
-report-develop-512:
-    open ./report-sqlite.sql | sqlite3 out/develop-512/benchmarks.sqlite -box
+cubrid-set-data-buffer-512M:
+    crudini --set $"($env.CUBRID)/conf/cubrid.conf" 'common' data_buffer_size 512M
+    cubrid server restart testdb
 
-report-develop-20000:
-    open ./report-sqlite.sql | sqlite3 out/develop-20000/benchmarks.sqlite -box
+cubrid-set-data-buffer-20G:
+    crudini --set $"($env.CUBRID)/conf/cubrid.conf" 'common' data_buffer_size 20G
+    cubrid server restart testdb
 
-report-oos-512:
-    open ./report-sqlite.sql | sqlite3 out/oos-512/benchmarks.sqlite -box
+cubrid-shutdown-and-prepare-broker:
+    do -i { cubrid service stop }
+    do -i { cubrid server stop testdb }
+    cubrid broker start
 
-report-oos-20000:
-    open ./report-sqlite.sql | sqlite3 out/oos-20000/benchmarks.sqlite -box
+run-benchmarks-oos-perf: cubrid-shutdown-and-prepare-broker
+    just run-benchmarks-oos-perf-20G
+    just run-benchmarks-oos-perf-512M
+
+run-benchmarks-develop: cubrid-shutdown-and-prepare-broker
+    just run-benchmarks-develop-20G
+    just run-benchmarks-develop-512M
+
+report-sqlite:
+    open ./report-sqlite.sql | sqlite3 out/benchmarks.sqlite -box

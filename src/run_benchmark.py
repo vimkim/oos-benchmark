@@ -7,6 +7,7 @@ import sqlite3
 from datetime import datetime, UTC
 import subprocess
 import re
+import time
 
 import CUBRIDdb
 
@@ -52,7 +53,11 @@ def run_trace_for_query(conn_url: str, user: str, password: str, sql: str):
 
         cur.execute(sql)
         cur.fetchall()
+
+        # time benchmark of the next line
+        start = time.perf_counter()
         cur.execute(sql)
+        elapsed = time.perf_counter() - start
         cur.fetchall()
 
         cur.execute("show trace")
@@ -61,7 +66,7 @@ def run_trace_for_query(conn_url: str, user: str, password: str, sql: str):
             raise RuntimeError("No trace data returned")
 
         trace_json = rows[0][0]
-        return json.loads(trace_json)
+        return (json.loads(trace_json), elapsed)
 
     finally:
         conn.close()
@@ -113,6 +118,7 @@ def init_db(db_path: str):
             table_name TEXT NOT NULL,
             num_rows INTEGER NOT NULL,
 
+            user_level_total_time INTEGER NOT NULL,
             access TEXT,
             heap_time INTEGER,
             heap_fetch INTEGER,
@@ -139,12 +145,13 @@ def save_result_db(conn: sqlite3.Connection, result: dict):
         """
         INSERT OR REPLACE INTO benchmarks (
             ts,
+            test_no,
             cubrid_branch,
             data_buffer_size,
-            test_no,
             col_names,
             table_name,
             num_rows,
+            user_level_total_time,
             access,
             heap_time,
             heap_fetch,
@@ -152,7 +159,7 @@ def save_result_db(conn: sqlite3.Connection, result: dict):
             heap_readrows,
             heap_rows
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             datetime.now(UTC).isoformat(timespec="seconds"),
@@ -162,6 +169,7 @@ def save_result_db(conn: sqlite3.Connection, result: dict):
             result["col_names"],
             result["table_name"],
             result["num_rows"],
+            result["user_level_total_time"],
             subq.get("access"),
             heap.get("time"),
             heap.get("fetch"),
@@ -233,7 +241,8 @@ def main():
     db_conn = init_db(args.db_path)
 
     for i in range(args.times):
-        trace_data = run_trace_for_query(
+        
+        trace_data, elapsed = run_trace_for_query(
             args.conn_url, args.user, args.password, sql)
 
         subq = extract_subquery_scan(trace_data)
@@ -246,6 +255,7 @@ def main():
             "table_name": args.table_name,
             "num_rows": args.num_rows,
             "subquery_scan": subq,
+            "user_level_total_time": int(elapsed * 1_000) # millisecond
         }
 
         filename = f"{args.cubrid_branch}_{args.data_buffer_size}_{args.table_name}_{args.col_names}_{args.num_rows}_testno_{i}.json"
