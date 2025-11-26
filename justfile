@@ -99,29 +99,35 @@ run-benchmark-16500-id-oos-perf-20G:
 run-benchmark-16500-all-oos-perf-20G:
     ^uv run src/run_benchmark.py --col-names "*" --table-name "t_16500" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '20.0G'
 
-run-benchmarks:
+run-benchmarks-develop-512M:
     just run-benchmark-2500-id-develop-512M
     just run-benchmark-2500-all-develop-512M
-    just run-benchmark-2500-id-develop-20G
-    just run-benchmark-2500-all-develop-20G
     just run-benchmark-15500-id-develop-512M
     just run-benchmark-15500-all-develop-512M
-    just run-benchmark-15500-id-develop-20G
-    just run-benchmark-15500-all-develop-20G
     just run-benchmark-16500-id-develop-512M
     just run-benchmark-16500-all-develop-512M
+
+run-benchmarks-develop-20G:
+    just run-benchmark-2500-id-develop-20G
+    just run-benchmark-2500-all-develop-20G
+    just run-benchmark-15500-id-develop-20G
+    just run-benchmark-15500-all-develop-20G
     just run-benchmark-16500-id-develop-20G
     just run-benchmark-16500-all-develop-20G
+
+run-benchmarks-oos-perf-512M:
     just run-benchmark-2500-id-oos-perf-512M
     just run-benchmark-2500-all-oos-perf-512M
-    just run-benchmark-2500-id-oos-perf-20G
-    just run-benchmark-2500-all-oos-perf-20G
     just run-benchmark-15500-id-oos-perf-512M
     just run-benchmark-15500-all-oos-perf-512M
-    just run-benchmark-15500-id-oos-perf-20G
-    just run-benchmark-15500-all-oos-perf-20G
     just run-benchmark-16500-id-oos-perf-512M
     just run-benchmark-16500-all-oos-perf-512M
+
+run-benchmarks-oos-perf-20G:
+    just run-benchmark-2500-id-oos-perf-20G
+    just run-benchmark-2500-all-oos-perf-20G
+    just run-benchmark-15500-id-oos-perf-20G
+    just run-benchmark-15500-all-oos-perf-20G
     just run-benchmark-16500-id-oos-perf-20G
     just run-benchmark-16500-all-oos-perf-20G
 

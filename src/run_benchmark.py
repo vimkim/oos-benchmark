@@ -248,7 +248,7 @@ def main():
             "subquery_scan": subq,
         }
 
-        filename = f"{args.table_name}_{args.col_names}_{args.num_rows}_testno_{i}.json"
+        filename = f"{args.cubrid_branch}_{args.data_buffer_size}_{args.table_name}_{args.col_names}_{args.num_rows}_testno_{i}.json"
         save_result(result, filename)
 
         # SQLite row
