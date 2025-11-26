@@ -5,6 +5,8 @@ import sys
 import os
 import sqlite3
 from datetime import datetime, UTC
+import subprocess
+import re
 
 import CUBRIDdb
 
@@ -89,6 +91,8 @@ def parse_args():
         default="out/benchmarks.sqlite",
         help="Path to SQLite DB file (default: out/benchmarks.sqlite)",
     )
+    parser.add_argument("--cubrid-branch", required=True)
+    parser.add_argument("--data-buffer-size", required=True)
     return parser.parse_args()
 
 
@@ -101,6 +105,8 @@ def init_db(db_path: str):
         """
         CREATE TABLE IF NOT EXISTS benchmarks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cubrid_branch TEXT NOT NULL,
+            data_buffer_size INTEGER NOT NULL,
             ts TEXT NOT NULL,
             test_no INTEGER NOT NULL,
             col_names TEXT NOT NULL,
@@ -114,7 +120,7 @@ def init_db(db_path: str):
             heap_readrows INTEGER,
             heap_rows INTEGER,
 
-            UNIQUE(test_no, col_names, table_name, num_rows)
+            UNIQUE(test_no, col_names, table_name, num_rows, cubrid_branch, data_buffer_size)
         )
         """
     )
@@ -133,6 +139,8 @@ def save_result_db(conn: sqlite3.Connection, result: dict):
         """
         INSERT OR REPLACE INTO benchmarks (
             ts,
+            cubrid_branch,
+            data_buffer_size,
             test_no,
             col_names,
             table_name,
@@ -144,11 +152,13 @@ def save_result_db(conn: sqlite3.Connection, result: dict):
             heap_readrows,
             heap_rows
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             datetime.now(UTC).isoformat(timespec="seconds"),
             result["test_no"],
+            result["cubrid_branch"],
+            result["data_buffer_size"],
             result["col_names"],
             result["table_name"],
             result["num_rows"],
@@ -164,9 +174,60 @@ def save_result_db(conn: sqlite3.Connection, result: dict):
     conn.commit()
 
 
+def validate_cubrid_conf(args):
+    # 1. Check that CUBRID env var contains args.cubrid_branch
+    cubrid_env = os.environ.get("CUBRID")
+    if not cubrid_env:
+        raise RuntimeError("CUBRID environment variable is not set")
+
+    if args.cubrid_branch not in cubrid_env:
+        raise ValueError(
+            f"CUBRID env var '{cubrid_env}' does not contain branch '{args.cubrid_branch}'"
+        )
+
+    # 2. Check that `cubrid paramdump` contains expected data_buffer_size
+    try:
+        result = subprocess.run(
+            ["cubrid", "paramdump", "testdb"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except FileNotFoundError:
+        raise RuntimeError("cubrid binary not found in PATH")
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"cubrid paramdump failed: {e.stderr}") from e
+
+    output = result.stdout
+
+    # Get only the line containing data_buffer_size
+    line = next(
+        (l for l in output.splitlines() if "data_buffer_size" in l),
+        None
+    )
+
+    if not line:
+        raise ValueError("data_buffer_size not found in paramdump output")
+
+# Extract the value (20.0G)
+    match = re.search(r"data_buffer_size\s*=\s*([^\s()]+)", line)
+    if not match:
+        raise ValueError("Failed to parse data_buffer_size value")
+
+    actual_value = match.group(1)   # "20.0G"
+
+    if actual_value != str(args.data_buffer_size):
+        raise ValueError(
+            f"data_buffer_size mismatch: expected {args.data_buffer_size}, got {actual_value}"
+        )
+
+
 def main():
     args = parse_args()
     sql = build_sql(args.col_names, args.table_name, args.num_rows)
+
+    validate_cubrid_conf(args)
 
     # init sqlite db once
     db_conn = init_db(args.db_path)
@@ -179,10 +240,12 @@ def main():
 
         result = {
             "test_no": i,
+            "cubrid_branch": args.cubrid_branch,
+            "data_buffer_size": args.data_buffer_size,
             "col_names": args.col_names,
             "table_name": args.table_name,
             "num_rows": args.num_rows,
-            "subquery_scan": subq
+            "subquery_scan": subq,
         }
 
         filename = f"{args.table_name}_{args.col_names}_{args.num_rows}_testno_{i}.json"
