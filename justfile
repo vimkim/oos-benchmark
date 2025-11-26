@@ -14,6 +14,9 @@ show-trace:
 make-insert-sql-t_2500:
     ^uv run -- src/make_sql_bulk_insert.py -t t_2500 -o t_2500.sql -n 300000 -l 512 --num-char 1 --char-len 500
 
+make-insert-sql-t_8000:
+    ^uv run -- src/make_sql_bulk_insert.py -t t_8000 -o t_8000.sql -n 300000 -l 512 --num-char 1 --char-len 1746
+
 make-insert-sql-t_15500:
     ^uv run src/make_sql_bulk_insert.py -t t_15500 -o t_15500.sql -n 300000 -l 512 --num-char 2 --char-len 1875
 
@@ -22,6 +25,9 @@ make-insert-sql-t_16500:
 
 load-t_2500:
     cs --no-auto-commit -i t_2500.sql
+
+load-t_8000:
+    cs --no-auto-commit -i t_8000.sql
 
 load-t_15500:
     cs --no-auto-commit -i t_15500.sql
@@ -40,6 +46,18 @@ run-benchmark-2500-id-develop-20G:
 
 run-benchmark-2500-all-develop-20G:
     ^uv run src/run_benchmark.py --col-names "*" --table-name "t_2500" --num-rows 300000 --times 3 --cubrid-branch 'develop' --data-buffer-size '20.0G'
+
+run-benchmark-8000-id-develop-512M:
+    ^uv run src/run_benchmark.py --col-names "id" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'develop' --data-buffer-size '512.0M'
+
+run-benchmark-8000-all-develop-512M:
+    ^uv run src/run_benchmark.py --col-names "*" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'develop' --data-buffer-size '512.0M'
+
+run-benchmark-8000-id-develop-20G:
+    ^uv run src/run_benchmark.py --col-names "id" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'develop' --data-buffer-size '20.0G'
+
+run-benchmark-8000-all-develop-20G:
+    ^uv run src/run_benchmark.py --col-names "*" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'develop' --data-buffer-size '20.0G'
 
 run-benchmark-15500-id-develop-512M:
     ^uv run src/run_benchmark.py --col-names "id" --table-name "t_15500" --num-rows 300000 --times 3 --cubrid-branch 'develop' --data-buffer-size '512.0M'
@@ -77,6 +95,18 @@ run-benchmark-2500-id-oos-perf-20G:
 run-benchmark-2500-all-oos-perf-20G:
     ^uv run src/run_benchmark.py --col-names "*" --table-name "t_2500" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '20.0G'
 
+run-benchmark-8000-id-oos-perf-512M:
+    ^uv run src/run_benchmark.py --col-names "id" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '512.0M'
+
+run-benchmark-8000-all-oos-perf-512M:
+    ^uv run src/run_benchmark.py --col-names "*" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '512.0M'
+
+run-benchmark-8000-id-oos-perf-20G:
+    ^uv run src/run_benchmark.py --col-names "id" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '20.0G'
+
+run-benchmark-8000-all-oos-perf-20G:
+    ^uv run src/run_benchmark.py --col-names "*" --table-name "t_8000" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '20.0G'
+
 run-benchmark-15500-id-oos-perf-512M:
     ^uv run src/run_benchmark.py --col-names "id" --table-name "t_15500" --num-rows 300000 --times 3 --cubrid-branch 'oos-perf' --data-buffer-size '512.0M'
 
@@ -104,6 +134,8 @@ run-benchmark-16500-all-oos-perf-20G:
 run-benchmarks-develop-512M: cubrid-set-data-buffer-512M
     just run-benchmark-2500-id-develop-512M
     just run-benchmark-2500-all-develop-512M
+    just run-benchmark-8000-id-develop-512M
+    just run-benchmark-8000-all-develop-512M
     just run-benchmark-15500-id-develop-512M
     just run-benchmark-15500-all-develop-512M
     just run-benchmark-16500-id-develop-512M
@@ -112,6 +144,8 @@ run-benchmarks-develop-512M: cubrid-set-data-buffer-512M
 run-benchmarks-develop-20G: cubrid-set-data-buffer-20G
     just run-benchmark-2500-id-develop-20G
     just run-benchmark-2500-all-develop-20G
+    just run-benchmark-8000-id-develop-20G
+    just run-benchmark-8000-all-develop-20G
     just run-benchmark-15500-id-develop-20G
     just run-benchmark-15500-all-develop-20G
     just run-benchmark-16500-id-develop-20G
@@ -120,6 +154,8 @@ run-benchmarks-develop-20G: cubrid-set-data-buffer-20G
 run-benchmarks-oos-perf-512M: cubrid-set-data-buffer-512M
     just run-benchmark-2500-id-oos-perf-512M
     just run-benchmark-2500-all-oos-perf-512M
+    just run-benchmark-8000-id-oos-perf-512M
+    just run-benchmark-8000-all-oos-perf-512M
     just run-benchmark-15500-id-oos-perf-512M
     just run-benchmark-15500-all-oos-perf-512M
     just run-benchmark-16500-id-oos-perf-512M
@@ -128,6 +164,8 @@ run-benchmarks-oos-perf-512M: cubrid-set-data-buffer-512M
 run-benchmarks-oos-perf-20G: cubrid-set-data-buffer-20G
     just run-benchmark-2500-id-oos-perf-20G
     just run-benchmark-2500-all-oos-perf-20G
+    just run-benchmark-8000-id-oos-perf-20G
+    just run-benchmark-8000-all-oos-perf-20G
     just run-benchmark-15500-id-oos-perf-20G
     just run-benchmark-15500-all-oos-perf-20G
     just run-benchmark-16500-id-oos-perf-20G
