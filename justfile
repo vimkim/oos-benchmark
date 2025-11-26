@@ -155,4 +155,4 @@ run-benchmarks-develop: cubrid-shutdown-and-prepare-broker
     just run-benchmarks-develop-512M
 
 report-sqlite:
-    open ./report-sqlite.sql | sqlite3 out/benchmarks.sqlite -box
+    open ./report-sqlite.sql | sqlite3 out/benchmarks.sqlite -box | awk -f color-table.awk
