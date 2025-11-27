@@ -23,6 +23,11 @@ def main():
         help="Length of the 'A' string (for RPAD)"
     )
     parser.add_argument(
+        "--num-varchar",
+        type=int,
+        help="Number of 512 byte VARCHAR columns"
+    )
+    parser.add_argument(
         "-n", "--nums",
         type=int,
         required=True,
@@ -44,6 +49,7 @@ def main():
 
     TABLE_NAME = args.table_name
     OUTPUT_FILE = args.output
+    NUM_VARCHAR = args.num_varchar if args.num_varchar else 1
     NUM_CHAR = args.num_char if args.num_char else 0
     CHAR_LENGTH = args.char_len
     CUBRID_CHAR_SIZE = 4
@@ -56,16 +62,23 @@ def main():
     # Precompute column definitions and lists
     base_columns = ["id", "txt"]
     char_columns = [f"c{i + 1}" for i in range(NUM_CHAR)]
-    all_columns = base_columns + char_columns
+    additional_varchar_columns = [f"v{i}" for i in range(1, NUM_VARCHAR)]
+    all_columns = base_columns + additional_varchar_columns + char_columns
     column_list_sql = ", ".join(all_columns)
 
     # For CREATE TABLE
+
+    # additional VARCHAR columns v1..vN-1
+    # if NUM_VARCHAR = 1, no additional columns
+    # if NUM_VARCHAR > 1, add v1..vN-1
+    additional_varchar_defs = "".join(f", v{i} VARCHAR" for i in range(1, NUM_VARCHAR))
+
     if NUM_CHAR > 0:
         char_defs = ", ".join(
             f"{col} CHAR({CHAR_LENGTH})" for col in char_columns)
-        table_def = f"(id INT, txt VARCHAR, {char_defs})"
+        table_def = f"(id INT, txt VARCHAR, {additional_varchar_defs}, {char_defs})"
     else:
-        table_def = "(id INT, txt VARCHAR)"
+        table_def = f"(id INT, txt VARCHAR {additional_varchar_defs})"
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         # Table creation
@@ -81,6 +94,9 @@ def main():
                 str(i),
                 f"RPAD('A', {A_LEN}, 'A')",
             ]
+
+            for i in range(1, NUM_VARCHAR):
+                values.append(f"RPAD('a', {A_LEN}, 'a')")
 
             # c1..cN as CHAR({CHAR_LENGTH}) filled with 'B', 'C', 'D', ...
             for j in range(NUM_CHAR):

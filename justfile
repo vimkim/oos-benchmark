@@ -23,6 +23,9 @@ make-insert-sql-t_15500:
 make-insert-sql-t_16500:
     ^uv run src/make_sql_bulk_insert.py -t t_16500 -o t_16500.sql -n 300000 -l 16500 --num-char 0 --char-len 0
 
+make-insert-sql-t_oos_8000:
+    ^uv run src/make_sql_bulk_insert.py -t t_oos_8000 -o t_oos_8000.sql -n 300000 -l 16500 --num-char 0 --char-len 0 --num-varchar=10
+
 load-t_2500:
     cs --no-auto-commit -i t_2500.sql
 
@@ -34,6 +37,9 @@ load-t_15500:
 
 load-t_16500:
     cs --no-auto-commit -i t_16500.sql
+
+load-t_oos_8000:
+    cs --no-auto-commit -i t_oos_8000.sql
 
 run-benchmark-2500-id-develop-512M:
     ^uv run src/run_benchmark.py --col-names "id" --table-name "t_2500" --num-rows 300000 --times 3 --cubrid-branch 'develop' --data-buffer-size '512.0M'
