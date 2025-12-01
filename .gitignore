@@ -12,3 +12,4 @@ wheels/
 /out/
 /load/
 /sql/
+.ropeproject
