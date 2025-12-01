@@ -340,3 +340,11 @@ change-mode-oos-perf:
     cubrid broker start
     cubrid server start testdb
 
+perf-record-cub_server:
+    sudo perf record -F max -g -a -p (^ps aux | rg vimkim | rg cub_server | fzf | awk '{print $2}')
+
+perf-report:
+    sudo perf report -g
+
+perf-flamegraph:
+    sudo perf script | inferno-collapse-perf | flamelens
