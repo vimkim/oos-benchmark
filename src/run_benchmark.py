@@ -79,6 +79,12 @@ def save_result(output_json: dict, filename: str):
         json.dump(output_json, f, indent=2)
     print(f"Saved: {path}")
 
+def save_sql(sql_query_string: str, filename: str):
+    os.makedirs("sql", exist_ok=True)
+    path = os.path.join("sql", filename)
+    with open(path, "w") as f:
+        f.write(sql_query_string)
+    print(f"Saved: {path}")
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -260,6 +266,9 @@ def main():
 
         filename = f"{args.cubrid_branch}_{args.data_buffer_size}_{args.table_name}_{args.col_names}_{args.num_rows}_testno_{i}.json"
         save_result(result, filename)
+
+        sql_filename = f"{args.cubrid_branch}_{args.data_buffer_size}_{args.table_name}_{args.col_names}_{args.num_rows}_testno_{i}.sql"
+        save_sql(sql, sql_filename)
 
         # SQLite row
         save_result_db(db_conn, result)
