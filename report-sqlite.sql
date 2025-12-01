@@ -56,7 +56,7 @@ HAVING
     col_names = 'id'
     AND table_name = 't_2500'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -85,7 +85,7 @@ HAVING
     col_names = 'id'
     AND table_name = 't_8000'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -114,7 +114,7 @@ HAVING
     col_names = 'id'
     AND table_name = 't_15500'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -145,7 +145,7 @@ HAVING
     col_names = 'id'
     AND table_name = 't_16500'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -180,7 +180,7 @@ HAVING
     col_names = '*'
     AND table_name = 't_2500'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -209,7 +209,7 @@ HAVING
     col_names = '*'
     AND table_name = 't_8000'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -238,7 +238,7 @@ HAVING
     col_names = '*'
     AND table_name = 't_15500'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -269,7 +269,7 @@ HAVING
     col_names = '*'
     AND table_name = 't_16500'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -298,7 +298,7 @@ HAVING
     col_names = '*'
     AND table_name = 't_oos_8000'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
 
 .print '';
 
@@ -327,4 +327,4 @@ HAVING
     col_names = '*'
     AND table_name = 't_oos_vc20'
 ORDER BY
-    cast(avg(user_level_total_time) as real);
+    cast(avg(heap_time) as real);
