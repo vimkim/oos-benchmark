@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 
 
 def main():
@@ -48,7 +49,9 @@ def main():
     args = parser.parse_args()
 
     TABLE_NAME = args.table_name
-    OUTPUT_FILE = args.output
+
+    os.makedirs("load", exist_ok=True)
+    OUTPUT_FILE = os.path.join("load", args.output)
     NUM_VARCHAR = args.num_varchar if args.num_varchar else 1
     NUM_CHAR = args.num_char if args.num_char else 0
     CHAR_LENGTH = args.char_len
