@@ -25,7 +25,7 @@ FROM
             (
                 SELECT
                     /*+ NO_MERGE RECOMPILE NO_PARALLEL_HEAP_SCAN PARALLEL(0) */
-                    *
+                    id 
                 FROM
                     {left_table}
                 LIMIT
@@ -34,7 +34,7 @@ FROM
             {join_type} JOIN (
                 SELECT
                     /*+ NO_MERGE RECOMPILE NO_PARALLEL_HEAP_SCAN PARALLEL(0) */
-                    *
+                    id 
                 FROM
                     {right_table}
                 LIMIT
