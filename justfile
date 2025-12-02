@@ -1,6 +1,7 @@
 set shell := ["nu", "-c"]
 
 mod cub '~/my-cubrid/stow/cubrid/justfile'
+mod join './join.just'
 
 cubrid-server-refresh:
     do -i { cubrid service stop }
@@ -328,15 +329,13 @@ change-mode-develop:
     do -i { cubrid service stop }
     ^echo 'PRESET_MODE=release_gcc' | save -f .env
     ^echo 'SOURCE_DIR=/home/vimkim/gh/cb/develop' | save --append .env
-    direnv reload
-    cubrid broker start
-    cubrid server start testdb
 
 change-mode-oos-perf:
     do -i { cubrid service stop }
     ^echo 'PRESET_MODE=release_gcc' o> .env
     ^echo 'SOURCE_DIR=/home/vimkim/gh/cb/oos-perf' | save --append .env
-    direnv reload
+
+cubrid-start:
     cubrid broker start
     cubrid server start testdb
 

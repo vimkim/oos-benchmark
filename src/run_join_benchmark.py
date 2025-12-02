@@ -15,7 +15,7 @@ from run_benchmark import (
 SQL_TEMPLATE_JOIN = """
 SELECT
     /*+ NO_MERGE RECOMPILE NO_PARALLEL_HEAP_SCAN PARALLEL(0) */
-    *
+    count(*)
 FROM
     (
         SELECT
