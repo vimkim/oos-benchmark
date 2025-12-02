@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import re
 
 from run_benchmark import (
     run_trace_for_query,
@@ -14,43 +15,56 @@ from run_benchmark import (
 SQL_TEMPLATE_JOIN = """
 SELECT
     /*+ NO_MERGE RECOMPILE NO_PARALLEL_HEAP_SCAN PARALLEL(0) */
-    count(*)
+    *
 FROM
     (
         SELECT
             /*+ NO_MERGE RECOMPILE NO_PARALLEL_HEAP_SCAN PARALLEL(0) */
-            {select_list}
+            l.id
         FROM
-            {left_table} AS l
-            {join_type} JOIN {right_table} AS r
-                ON {join_condition}
-        LIMIT
-            {num_rows}
-    ) t;
+            (
+                SELECT
+                    /*+ NO_MERGE RECOMPILE NO_PARALLEL_HEAP_SCAN PARALLEL(0) */
+                    *
+                FROM
+                    {left_table}
+                LIMIT
+                    {left_limit}
+            ) AS l
+            {join_type} JOIN (
+                SELECT
+                    /*+ NO_MERGE RECOMPILE NO_PARALLEL_HEAP_SCAN PARALLEL(0) */
+                    *
+                FROM
+                    {right_table}
+                LIMIT
+                    {right_limit}
+            ) AS r ON {join_condition}
+    ) AS t;
 """
 
 
 def build_join_sql(
-    select_list: str,
     left_table: str,
     right_table: str,
+    left_limit: int,
+    right_limit: int,
     join_condition: str,
     join_type: str,
-    num_rows: int,
 ) -> str:
     return SQL_TEMPLATE_JOIN.format(
-        select_list=select_list,
         left_table=left_table,
         right_table=right_table,
+        left_limit=left_limit,
+        right_limit=right_limit,
         join_condition=join_condition,
         join_type=join_type.upper(),
-        num_rows=num_rows,
     )
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run one JOIN trace benchmark and save result JSON"
+        description="Run one JOIN trace benchmark (subselect LIMIT + JOIN) and save result JSON"
     )
     parser.add_argument(
         "--conn-url", default="CUBRID:localhost:33000:testdb:::"
@@ -58,12 +72,7 @@ def parse_args():
     parser.add_argument("--user", default="dba")
     parser.add_argument("--password", default="")
 
-    # JOIN-specific knobs
-    parser.add_argument(
-        "--select-list",
-        required=True,
-        help='SELECT list for inner query, e.g. "l.id, r.value"',
-    )
+    # left / right tables
     parser.add_argument(
         "--left-table-name",
         required=True,
@@ -74,10 +83,25 @@ def parse_args():
         required=True,
         help="Right table name in the JOIN",
     )
+
+    # inner SELECT limits
+    parser.add_argument(
+        "--left-limit",
+        type=int,
+        default=10,
+        help="LIMIT for inner SELECT on left table (default: 10)",
+    )
+    parser.add_argument(
+        "--right-limit",
+        type=int,
+        default=10,
+        help="LIMIT for inner SELECT on right table (default: 10)",
+    )
+
     parser.add_argument(
         "--join-condition",
-        required=True,
-        help='JOIN condition, e.g. "l.id = r.id"',
+        default="l.id = r.id",
+        help='JOIN condition, e.g. "l.id = r.id" (default: l.id = r.id)',
     )
     parser.add_argument(
         "--join-type",
@@ -85,8 +109,12 @@ def parse_args():
         help='JOIN type (INNER, LEFT, RIGHT, etc). Default: INNER',
     )
 
-    parser.add_argument("--num-rows", type=int, default=300000)
-    parser.add_argument("--times", type=int, default=1)
+    parser.add_argument(
+        "--times",
+        type=int,
+        default=1,
+        help="Number of repetitions",
+    )
 
     parser.add_argument(
         "--db-path",
@@ -99,28 +127,25 @@ def parse_args():
 
 
 def sanitize_for_filename(s: str) -> str:
-    import re
-
     return re.sub(r"[^0-9A-Za-z_.-]+", "_", s)
 
 
 def main():
     args = parse_args()
 
-    # Build JOIN SQL
     sql = build_join_sql(
-        select_list=args.select_list,
         left_table=args.left_table_name,
         right_table=args.right_table_name,
+        left_limit=args.left_limit,
+        right_limit=args.right_limit,
         join_condition=args.join_condition,
         join_type=args.join_type,
-        num_rows=args.num_rows,
     )
 
-    # Ensure we are running against the intended CUBRID build + buffer size
+    # Validate CUBRID env + data_buffer_size
     validate_cubrid_conf(args)
 
-    # Initialize / migrate SQLite DB (reuses same schema as scan benchmark)
+    # Reuse same SQLite schema as the scan benchmark
     db_conn = init_db(args.db_path)
 
     left = sanitize_for_filename(args.left_table_name)
@@ -135,34 +160,36 @@ def main():
 
         subq = extract_subquery_scan(trace_data)
 
+        # num_rows: record what we limited to on the left side
         result = {
             "test_no": i,
             "cubrid_branch": args.cubrid_branch,
             "data_buffer_size": args.data_buffer_size,
-            # For compatibility with the existing SQLite schema:
-            "col_names": args.select_list,
-            "table_name": f"{args.left_table_name} {args.join_type} JOIN "
-                          f"{args.right_table_name} ON {args.join_condition}",
-            "num_rows": args.num_rows,
+            "col_names": "l.id",  # middle SELECT projection
+            "table_name": (
+                f"JOIN(LEFT={args.left_table_name},RIGHT={args.right_table_name},"
+                f"TYPE={args.join_type},COND={args.join_condition},"
+                f"LIMIT_L={args.left_limit},LIMIT_R={args.right_limit})"
+            ),
+            "num_rows": args.left_limit,
             "subquery_scan": subq,
-            "user_level_total_time": int(elapsed * 1_000),  # milliseconds
+            "user_level_total_time": int(elapsed * 1_000),  # ms
         }
 
-        # JSON output
         filename = (
             f"{args.cubrid_branch}_{args.data_buffer_size}_join_"
-            f"{left}_{join_type}_{right}_{join_key}_{args.num_rows}_testno_{i}.json"
+            f"{left}_{join_type}_{right}_{join_key}_"
+            f"L{args.left_limit}_R{args.right_limit}_testno_{i}.json"
         )
         save_result(result, filename)
 
-        # SQL text output
         sql_filename = (
             f"{args.cubrid_branch}_{args.data_buffer_size}_join_"
-            f"{left}_{join_type}_{right}_{join_key}_{args.num_rows}_testno_{i}.sql"
+            f"{left}_{join_type}_{right}_{join_key}_"
+            f"L{args.left_limit}_R{args.right_limit}_testno_{i}.sql"
         )
         save_sql(sql, sql_filename)
 
-        # SQLite row
         save_result_db(db_conn, result)
 
     db_conn.close()
@@ -170,4 +197,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
