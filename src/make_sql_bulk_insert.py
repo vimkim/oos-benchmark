@@ -79,7 +79,7 @@ def main():
     if NUM_CHAR > 0:
         char_defs = ", ".join(
             f"{col} CHAR({CHAR_LENGTH})" for col in char_columns)
-        table_def = f"(id INT, txt VARCHAR, {additional_varchar_defs}, {char_defs})"
+        table_def = f"(id INT, txt VARCHAR, {additional_varchar_defs}{char_defs})"
     else:
         table_def = f"(id INT, txt VARCHAR {additional_varchar_defs})"
 
